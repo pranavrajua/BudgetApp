@@ -128,115 +128,128 @@
     </div>
   </div>
   <script>
-    function applyTheme() {
-      const theme = localStorage.getItem("theme") || "light";
-      document.documentElement.setAttribute("data-theme", theme);
+  function applyTheme() {
+    const theme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", theme);
+  }
+
+  applyTheme();
+
+  let data = JSON.parse(localStorage.getItem("budgetData")) || [];
+  let selectedStart = null;
+  let selectedEnd = null;
+
+  function saveData() {
+    localStorage.setItem("budgetData", JSON.stringify(data));
+  }
+
+  function renderTable() {
+    const container = document.getElementById("tableContainer");
+    const filtered = getFilteredData();
+
+    if (filtered.length === 0) {
+      container.innerHTML = "<p class='empty-msg'>No entries to display.</p>";
+      return;
     }
 
-    applyTheme();
+    const rows = filtered.map((entry, index) => `
+      <tr>
+        <td>${entry.category}</td>
+        <td>$${entry.amount.toFixed(2)}</td>
+        <td>${entry.type}</td>
+        <td>${entry.date}</td>
+        <td><button onclick="deleteEntry(${index})">Delete</button></td>
+      </tr>
+    `).join("");
 
-    let data = JSON.parse(localStorage.getItem("budgetData")) || [];
-    let selectedStart = null;
-    let selectedEnd = null;
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Category</th><th>Amount</th><th>Type</th><th>Date</th><th>Action</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
 
-    function renderTable() {
-      const container = document.getElementById("tableContainer");
-      const filtered = getFilteredData();
-
-      if (filtered.length === 0) {
-        container.innerHTML = "<p class='empty-msg'>No entries to display.</p>";
-        return;
-      }
-
-      const rows = filtered.map((entry, index) => `
-        <tr>
-          <td>${entry.category}</td>
-          <td>$${entry.amount.toFixed(2)}</td>
-          <td>${entry.type}</td>
-          <td>${entry.date}</td>
-          <td><button onclick="deleteEntry(${data.indexOf(entry)})">Delete</button></td>
-        </tr>
-      `).join("");
-
-      container.innerHTML = `
-        <table>
-          <thead>
-            <tr><th>Category</th><th>Amount</th><th>Type</th><th>Date</th><th>Action</th></tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
-    }
-
-    function deleteEntry(index) {
-      if (confirm("Delete this entry?")) {
-        data.splice(index, 1);
-        localStorage.setItem("budgetData", JSON.stringify(data));
-        renderTable();
-      }
-    }
-
-    function deleteAll() {
-      if (data.length === 0) return;
-      if (confirm("Permanently delete all entries? This cannot be undone.")) {
-        localStorage.removeItem("budgetData");
-        data = [];
-        renderTable();
-      }
-    }
-    function exportData() {
-     const filtered = getFilteredData();
-     if (filtered.length === 0) {
-       alert("No data in selected range to export.");
-       return;
-     }
-     const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
-     const url = URL.createObjectURL(blob);
-     const a = document.createElement("a");
-     a.href = url;
-     a.download = "budget-data.json";
-     a.click();
-     URL.revokeObjectURL(url);
-   }
-
-    function importData(event) {
-      const file = event.target.files[0];
-        if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const imported = JSON.parse(e.target.result);
-          if (Array.isArray(imported)) {
-            data = imported;
-            localStorage.setItem("budgetData", JSON.stringify(data));
-            renderTable();
-          }   
-          else {
-            alert("Invalid data format.");
-          }
-        } 
-          catch {
-            alert("Failed to import data.");
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    function getFilteredData() {
-      if (!selectedStart || !selectedEnd) return data;
-      return data.filter(entry => {
-        const date = new Date(entry.date);
-        return date >= selectedStart && date <= selectedEnd;
-      });
-    }
-    function clearDateFilter() {
-      selectedStart = null;
-      selectedEnd = null;
-      document.getElementById("rangeInput")._flatpickr.clear();
+  function deleteEntry(index) {
+    const filtered = getFilteredData();
+    const entryToDelete = filtered[index];
+    const actualIndex = data.findIndex(d =>
+      d.category === entryToDelete.category &&
+      d.amount === entryToDelete.amount &&
+      d.type === entryToDelete.type &&
+      d.date === entryToDelete.date
+    );
+    if (actualIndex !== -1 && confirm("Delete this entry?")) {
+      data.splice(actualIndex, 1);
+      saveData();
       renderTable();
     }
+  }
+
+  function deleteAll() {
+    if (data.length === 0) return;
+    if (confirm("Permanently delete all entries? This cannot be undone.")) {
+      data = [];
+      saveData();
+      renderTable();
+    }
+  }
+
+  function exportData() {
+    const filtered = getFilteredData();
+    if (filtered.length === 0) {
+      alert("No data in selected range to export.");
+      return;
+    }
+    const blob = new Blob([JSON.stringify(filtered)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "budget-data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (Array.isArray(imported)) {
+          data = imported;
+          saveData();
+          renderTable();
+        } else {
+          alert("Invalid data format.");
+        }
+      } catch {
+        alert("Failed to import data.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function getFilteredData() {
+    if (!selectedStart || !selectedEnd) return data;
+    return data.filter(entry => {
+      const date = new Date(entry.date);
+      return date >= selectedStart && date <= selectedEnd;
+    });
+  }
+
+  function clearDateFilter() {
+    selectedStart = null;
+    selectedEnd = null;
+    document.getElementById("rangeInput")._flatpickr.clear();
     renderTable();
+  }
+
+  renderTable();
 
   flatpickr("#rangeInput", {
     mode: "range",
@@ -245,9 +258,8 @@
       if (dates.length === 2) {
         selectedStart = dates[0];
         selectedEnd = dates[1];
-      }   
-      else {
-      selectedStart = selectedEnd = null;
+      } else {
+        selectedStart = selectedEnd = null;
       }
       renderTable();
     },
@@ -257,7 +269,7 @@
   function openCalendar() {
     document.querySelector("#rangeInput")._flatpickr.open();
   }
-
 </script>
+
 </body>
 </html>
