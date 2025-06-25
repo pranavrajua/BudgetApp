@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Budget Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <style>
+    :root {
+      --primary: #e97a21;
+      --accent: #004d40;
+      --bg: #f1f1f1;
+      --card: #ffffff;
+      --text: #222;
+    }
+    [data-theme="dark"] {
+      --primary: #e97a21;
+      --accent: #004d40;
+      --bg: #121212;
+      --card: #1e1e1e;
+      --text: #f5f5f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: var(--card);
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    h2 {
+      text-align: center;
+      color: var(--primary);
+      margin: 0;
+    }
+    .dark-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      cursor: pointer;
+      font-size: 1.8rem;
+      color: var(--primary);
+    }
+    .form-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 25px 0;
+    }
+    label {
+      font-weight: 500;
+      display: block;
+      margin-bottom: 4px;
+    }
+    input, select {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background: #fdfdfd;
+      width: 100%;
+      font-size: 1rem;
+    }
+    [data-theme="dark"] input,
+    [data-theme="dark"] select {
+      background-color: #2c2c2c;
+      color: var(--text);
+      border-color: #444;
+    }
+    .button-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 10px 0;
+    }
+    .button-row button,
+    .button-row label {
+      flex: 0 0 auto;
+      justify-content: center;
+      text-align: center;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: none;
+      border-radius: 6px;
+      background-color: var(--primary);
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .button-row button:hover,
+    .button-row label:hover {
+      background-color: var(--accent);
+    }
+    .button-row label input[type="file"] {
+      display: none;
+    }
+    .top-buttons { margin-bottom: 30px; }
+    .bottom-buttons { margin-top: 30px; }
+    .toggle-buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .toggle-buttons button {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border: 1px solid var(--primary);
+      border-radius: 4px;
+      background: none;
+      color: var(--primary);
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    .toggle-buttons button.active {
+      background-color: var(--primary);
+      color: white;
+    }
+    .toggle-buttons button:hover {
+      background-color: var(--accent);
+      color: white;
+    }
+    #rangeInput {
+      padding: 8px;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: fit-content;
+      min-width: 220px;
+    }
+    .calendar-icon {
+      font-size: 1.6rem;
+      color: var(--primary);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s ease;
+    }
+
+    .calendar-icon:hover {
+      color: var(--accent);
+    }
+
+    #summary {
+      background: rgba(0, 150, 136, 0.1);
+      padding: 15px;
+      border-left: 5px solid var(--primary);
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .chart-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .chart-container {
+      height: 300px;
+      margin-top: 10px;
+    }
+    @media (max-width: 600px) {
+      .form-group {
+        grid-template-columns: 1fr;
+      }
+      .button-row,
+      .chart-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+    
+  </style>
+</head>
+<body>
+  <div class="container">
+    <span class="material-icons dark-toggle" onclick="toggleTheme()">dark_mode</span>
+    <h2><span class="material-icons">account_balance_wallet</span> Budget Tracker</h2>
+
+    <div class="form-group">
+      <div>
+        <label for="category">Category</label>
+        <input id="category" list="category-list" placeholder="e.g. Groceries" />
+        <datalist id="category-list"></datalist>
+      </div>
+      <div>
+        <label for="amount">Amount</label>
+        <input id="amount" type="number" placeholder="e.g. 100.00" />
+      </div>
+      <div>
+        <label for="type">Type</label>
+        <select id="type">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </div>
+      <div>
+        <label for="date">Date</label>
+        <input id="date" type="date" />
+      </div>
+    </div>
+
+    <div class="button-row top-buttons">
+      <button onclick="addEntry()"><span class="material-icons">add</span> Add</button>
+      <button onclick="clearData()"><span class="material-icons">delete</span> Clear</button>
+      <button onclick="undoClear()"><span class="material-icons">undo</span> Undo</button>
+    </div>
+
+    <div id="summary">Loading...</div>
+    <div class="chart-toolbar">
+      <div class="toggle-buttons">
+        <button onclick="setChartType('combined')" id="btn-combined">Combined</button>
+        <button onclick="setChartType('income')" id="btn-income">Income</button>
+        <button onclick="setChartType('expense')" id="btn-expense">Expense</button>
+      </div>
+      <span id="calendarIcon" class="material-icons calendar-icon" onclick="openCalendar()">calendar_month</span>
+      <input type="text" id="rangeInput" style="display: none;" />
+    </div>
+
+    <div class="chart-container">
+      <canvas id="chart"></canvas>
+    </div>
+
+    <div class="button-row bottom-buttons">
+      <button onclick="window.location.href='C:/Users/pranav.addipalli/OneDrive - Government of The District of Columbia/Documents/Budget App/data_table.html'">
+        <span class="material-icons">description</span> Full Data
+      </button>
+    </div>
+  </div>
+  <script>
+  let data = [];
+  let lastDeleted = null;
+  let currentChartType = 'combined';
+  let selectedStart = null;
+  let selectedEnd = null;
+
+  function loadData() {
+    const saved = localStorage.getItem("budgetData");
+    data = saved ? JSON.parse(saved) : [];
+  }
+
+  function saveData() {
+    localStorage.setItem("budgetData", JSON.stringify(data));
+  }
+
+  function addEntry() {
+    const category = document.getElementById("category").value.trim();
+    const amount = parseFloat(document.getElementById("amount").value);
+    const type = document.getElementById("type").value;
+    const date = document.getElementById("date").value;
+
+    if (!category || isNaN(amount) || !date) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    data.push({ category, amount, type, date });
+    saveData();
+    refreshUI();
+
+    document.getElementById("category").value = "";
+    document.getElementById("amount").value = "";
+    document.getElementById("date").value = "";
+  }
+
+  function clearData() {
+    if (data.length === 0) {
+      alert("No entries to delete.");
+      return;
+    }
+    if (confirm("Remove the last entry?")) {
+      lastDeleted = data.pop();    saveData();
+      refreshUI();
+    }
+  }
+
+  function undoClear() {
+    if (!lastDeleted) {
+      alert("No action to undo.");
+      return;
+    }
+
+    data.push(lastDeleted);
+    lastDeleted = null;
+    saveData();
+    refreshUI();
+  }
+
+
+  function refreshSummary() {
+    const income = data.filter(d => d.type === "income").reduce((s, d) => s + d.amount, 0);
+    const expense = data.filter(d => d.type === "expense").reduce((s, d) => s + d.amount, 0);
+    const savings = income - expense;
+    document.getElementById("summary").textContent =
+      `Income: $${income.toFixed(2)} | Expenses: $${expense.toFixed(2)} | Savings: $${savings.toFixed(2)}`;
+  }
+
+  function updateAutocomplete() {
+    const categories = [...new Set(data.map(d => d.category))];
+    const datalist = document.getElementById("category-list");
+    datalist.innerHTML = "";
+    categories.forEach(cat => {
+      const option = document.createElement("option");
+      option.value = cat;
+      datalist.appendChild(option);
+    });
+  }
+
+  function getFilteredData() {
+    if (!selectedStart || !selectedEnd) return data;
+    return data.filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate >= selectedStart && entryDate <= selectedEnd;
+    });
+  }
+
+  function updateChart() {
+    const ctx = document.getElementById("chart").getContext("2d");
+    const filtered = getFilteredData();
+
+    const grouped = {};
+    filtered.forEach(d => {
+      if (!grouped[d.date]) grouped[d.date] = { income: 0, expense: 0 };
+      grouped[d.date][d.type] += d.amount;
+    });
+
+    const labels = Object.keys(grouped).sort();
+    const incomeData = labels.map(d => grouped[d].income || 0);
+    const expenseData = labels.map(d => grouped[d].expense || 0);
+
+    if (window.myChart) window.myChart.destroy();
+
+    const datasets = [];
+    if (currentChartType === "income" || currentChartType === "combined") {
+      datasets.push({
+        label: "Income",
+        data: incomeData,
+        backgroundColor: "rgba(76, 175, 80, 0.6)"
+      });
+    }
+    if (currentChartType === "expense" || currentChartType === "combined") {
+      datasets.push({
+        label: "Expenses",
+        data: expenseData,
+        backgroundColor: "rgba(244, 67, 54, 0.6)"
+      });
+    }
+
+    window.myChart = new Chart(ctx, {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: currentChartType === "combined" },
+          y: { stacked: currentChartType === "combined" }
+        }
+      }
+    });
+  }
+
+  function setChartType(type) {
+    currentChartType = type;
+    document.querySelectorAll('.toggle-buttons button').forEach(btn =>
+      btn.classList.remove('active')
+    );
+    document.getElementById(`btn-${type}`).classList.add('active');
+    refreshUI();
+  }
+
+  function refreshUI() {
+    refreshSummary();
+    updateChart();
+    updateAutocomplete();
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+  }
+
+  function loadTheme() {
+    const theme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", theme);
+  }  
+  loadTheme();
+  loadData();
+  setChartType('combined');
+
+  flatpickr("#rangeInput", {
+    mode: "range",
+    dateFormat: "Y-m-d",
+    appendTo: document.body,
+    position: "below",
+    positionElement: document.getElementById("calendarIcon"),
+    onClose: function(selectedDates) {
+      if (selectedDates.length === 2) {
+        selectedStart = selectedDates[0];
+        selectedEnd = selectedDates[1];
+      } else {
+        selectedStart = selectedEnd = null;
+      }
+      refreshUI();
+    }
+  });
+
+  function openCalendar() {
+    document.querySelector("#rangeInput")._flatpickr.open();
+  }
+</script>
+</body>
+</html>
+
