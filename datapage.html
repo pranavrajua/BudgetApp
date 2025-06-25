@@ -99,7 +99,7 @@
 </head>
 <body>
     <div class="container">
-      <h2><span class="material-icons">delete_forever</span> Manage Entries</h2>
+      <h2><span class="material-icons">description</span> Manage Entries</h2>
     <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
       <div style="position: relative;">
         <input type="text" id="rangeInput" placeholder="Select date range" style="padding-left: 36px;" />
@@ -126,8 +126,7 @@
         <input type="file" accept=".json" onchange="importData(event)" style="display: none;" />
       </label>
     </div>
-  </div>s
-
+  </div>
   <script>
     function applyTheme() {
       const theme = localStorage.getItem("theme") || "light";
